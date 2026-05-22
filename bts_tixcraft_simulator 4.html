@@ -1,0 +1,1080 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>BTS 高雄場 拓元搶票模擬器</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang TC", "Microsoft JhengHei", sans-serif;
+    background: linear-gradient(135deg, #f5f5f7 0%, #e8e8ed 100%);
+    min-height: 100vh; color: #1a1a1a; -webkit-font-smoothing: antialiased;
+  }
+  .page-header { max-width: 480px; margin: 0 auto; padding: 24px 16px 12px; text-align: center; }
+  .page-header h1 { font-size: 22px; font-weight: 600; margin: 0 0 4px; }
+  .page-header p { font-size: 13px; color: #6b6b70; margin: 0; }
+  .container { max-width: 480px; margin: 0 auto; padding: 16px; }
+  .browser-frame {
+    background: #ffffff; border-radius: 18px; padding: 14px;
+    border: 1px solid #d2d2d7; box-shadow: 0 8px 32px rgba(0,0,0,0.08);
+  }
+  .browser-bar {
+    background: #f5f5f7; border-radius: 10px; padding: 10px 14px; margin-bottom: 12px;
+    display: flex; align-items: center; gap: 8px; border: 1px solid #e5e5ea;
+  }
+  .browser-bar-dots { display: flex; gap: 6px; }
+  .browser-bar-dot { width: 10px; height: 10px; border-radius: 50%; }
+  .dot-red { background: #ff5f57; }
+  .dot-yellow { background: #febc2e; }
+  .dot-green { background: #28c840; }
+  .browser-url {
+    flex: 1; font-size: 12px; color: #6b6b70; text-align: center;
+    background: #ffffff; padding: 4px 12px; border-radius: 6px; font-family: ui-monospace, monospace;
+  }
+  .browser-clock { font-size: 11px; color: #6b6b70; font-family: ui-monospace, monospace; }
+  #screen { background: #ffffff; border-radius: 10px; padding: 18px; min-height: 560px; border: 1px solid #e5e5ea; }
+  .member-bar {
+    background: #f5f5f7; border-radius: 8px; padding: 8px 12px; margin-bottom: 14px;
+    display: flex; justify-content: space-between; align-items: center; font-size: 12px;
+  }
+  .stats { margin-top: 12px; font-size: 12px; color: #6b6b70; text-align: center; }
+  .footer { max-width: 480px; margin: 16px auto 32px; padding: 0 16px; text-align: center; font-size: 11px; color: #8e8e93; line-height: 1.6; }
+  .footer a { color: #007aff; text-decoration: none; }
+
+  input, select {
+    width: 100%; box-sizing: border-box; padding: 10px 12px;
+    border: 1px solid #d2d2d7; border-radius: 8px; font-size: 14px; font-family: inherit;
+    background: #ffffff; color: #1a1a1a; outline: none;
+    transition: border-color 0.15s, box-shadow 0.15s;
+  }
+  input:focus, select:focus { border-color: #007aff; box-shadow: 0 0 0 3px rgba(0,122,255,0.15); }
+  input::placeholder { color: #b0b0b5; }
+  button {
+    font-family: inherit; cursor: pointer; -webkit-tap-highlight-color: transparent;
+    transition: opacity 0.15s, transform 0.05s;
+  }
+  button:active:not(:disabled) { transform: scale(0.98); }
+  button:disabled { cursor: not-allowed; }
+
+  .btn-primary { width: 100%; padding: 14px; font-size: 16px; font-weight: 500; background: #007aff; color: white; border: none; border-radius: 8px; }
+  .btn-primary:hover:not(:disabled) { background: #0066d6; }
+  .btn-primary:disabled { background: #c7c7cc; }
+  .btn-secondary { width: 100%; padding: 12px; font-size: 14px; background: #ffffff; color: #1a1a1a; border: 1px solid #d2d2d7; border-radius: 8px; }
+  .btn-secondary:hover { background: #f5f5f7; }
+  .btn-danger { width: 100%; padding: 14px; font-size: 16px; font-weight: 500; background: #ff3b30; color: white; border: none; border-radius: 8px; }
+  .btn-danger:hover:not(:disabled) { background: #e0342a; }
+  .btn-grab {
+    width: 100%; padding: 18px; font-size: 18px; font-weight: 600;
+    background: #ff3b30; color: white; border: none; border-radius: 10px;
+    animation: pulse 1.5s infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(255,59,48,0.5); }
+    50% { box-shadow: 0 0 0 12px rgba(255,59,48,0); }
+  }
+
+  .alert { padding: 10px 12px; border-radius: 8px; font-size: 13px; margin-bottom: 12px; line-height: 1.5; }
+  .alert-info { background: #e3f2fd; color: #0c447c; }
+  .alert-warning { background: #fff4e1; color: #854F0B; }
+  .alert-danger { background: #fcebeb; color: #791F1F; }
+  .alert-success { background: #e8f5e9; color: #1b5e20; }
+
+  .card { background: #f5f5f7; border-radius: 10px; padding: 14px; margin-bottom: 12px; }
+
+  label { font-size: 13px; color: #6b6b70; display: block; margin-bottom: 5px; }
+  .required { color: #ff3b30; }
+
+  .session-btn, .zone-btn {
+    width: 100%; border-radius: 10px; text-align: left;
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .session-btn { padding: 14px; background: #ffffff; border: 1px solid #d2d2d7; margin-bottom: 10px; }
+  .session-btn:hover:not(:disabled) { border-color: #007aff; background: #f8faff; }
+  .session-btn:disabled, .zone-btn:disabled { opacity: 0.5; background: #f5f5f7; }
+  .zone-btn { padding: 12px 14px; border: 1px solid #d2d2d7; margin-bottom: 7px; }
+
+  .captcha-display {
+    background: #ffffff; border: 1px solid #d2d2d7; border-radius: 10px;
+    padding: 14px; margin-bottom: 10px; text-align: center;
+    font-family: ui-monospace, monospace; font-size: 28px; font-weight: 600;
+    letter-spacing: 7px; font-style: italic; color: #1a1a1a;
+    background-image:
+      repeating-linear-gradient(45deg, transparent, transparent 8px, rgba(0,0,0,0.02) 8px, rgba(0,0,0,0.02) 9px),
+      repeating-linear-gradient(-45deg, transparent, transparent 8px, rgba(0,0,0,0.02) 8px, rgba(0,0,0,0.02) 9px);
+  }
+
+  table { width: 100%; font-size: 13px; line-height: 1.9; }
+  td { padding: 2px 0; }
+  td.label-td { color: #6b6b70; }
+  td.value-td { text-align: right; }
+
+  .progress-bar { background: #e5e5ea; border-radius: 999px; height: 8px; overflow: hidden; margin-bottom: 12px; }
+  .progress-fill { background: #007aff; height: 100%; width: 0%; transition: width 0.3s; }
+
+  .countdown-box {
+    background: #1a1a1a; color: white; border-radius: 12px;
+    padding: 24px 16px; text-align: center; margin: 16px 0;
+  }
+  .countdown-label { font-size: 13px; color: #999; margin-bottom: 6px; }
+  .countdown-number { font-size: 42px; font-weight: 600; font-family: ui-monospace, monospace; color: #ff453a; letter-spacing: 2px; }
+
+  /* 付款方式選擇 */
+  .payment-method {
+    display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; margin-bottom: 12px;
+  }
+  .pay-opt {
+    padding: 10px 6px; border: 1px solid #d2d2d7; border-radius: 8px;
+    text-align: center; font-size: 11px; cursor: pointer; background: white;
+  }
+  .pay-opt.active { border-color: #007aff; background: #f0f7ff; color: #007aff; font-weight: 500; }
+
+  .icon { display: inline-block; vertical-align: middle; margin-right: 4px; }
+  .text-danger { color: #ff3b30; }
+  .text-info { color: #007aff; }
+  .text-success { color: #34c759; }
+  .text-warning { color: #ff9500; }
+  .text-secondary { color: #6b6b70; }
+  .text-tertiary { color: #8e8e93; }
+
+  .flex { display: flex; }
+  .flex-1 { flex: 1; }
+  .gap-2 { gap: 8px; }
+  .mt-3 { margin-top: 12px; }
+  .text-center { text-align: center; }
+
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+  #screen > * { animation: fadeIn 0.2s ease; }
+
+  @media (max-width: 520px) {
+    .browser-frame { border-radius: 14px; padding: 10px; }
+    #screen { padding: 14px; min-height: 540px; }
+    .page-header { padding: 16px 12px 8px; }
+    .page-header h1 { font-size: 19px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="page-header">
+  <h1>🎫 BTS 高雄場 拓元搶票模擬器</h1>
+  <p>完整版・含 ARMY 預購碼 / 15 分鐘付款 / 多種付款方式</p>
+</div>
+
+<div class="container">
+  <div class="browser-frame">
+    <div class="browser-bar">
+      <div class="browser-bar-dots">
+        <span class="browser-bar-dot dot-red"></span>
+        <span class="browser-bar-dot dot-yellow"></span>
+        <span class="browser-bar-dot dot-green"></span>
+      </div>
+      <div class="browser-url">🔒 tixcraft.com</div>
+      <div class="browser-clock" id="topclock">11:59:55</div>
+    </div>
+    <div id="screen"></div>
+  </div>
+  <div class="stats" id="stats"></div>
+</div>
+
+<div class="footer">
+  此為非官方練習模擬器，僅供 ARMY 練習搶票流程使用<br>
+  實際購票請至 <a href="https://tixcraft.com" target="_blank">tixcraft.com</a> · BTS WORLD TOUR ARIRANG
+</div>
+
+<script>
+(function(){
+  const app = document.getElementById('screen');
+  const topclock = document.getElementById('topclock');
+  const statsEl = document.getElementById('stats');
+
+  let state = {
+    page: 'start',
+    mode: 'army',  // army / lntw / public
+    startTime: null, endTime: null, pageStartTime: null, stageTimes: {},
+    selectedDate: null, selectedZone: null, selectedSubZone: null, quantity: 1,
+    captchaCode: '', queueNumber: 0,
+    timer: null, clockTimer: null,
+    paymentTimer: 900, // 15 分鐘
+    bestTime: null, countdownReady: false,
+    paymentMethod: 'card'
+  };
+
+  try {
+    const saved = localStorage.getItem('bts_best_time');
+    if(saved) state.bestTime = parseFloat(saved);
+  } catch(e) {}
+
+  const zones = [
+    { price: 9380, bg: '#FCEBEB', text: '#791F1F', zones: ['A1','A2','A3','A4','A5','A6','A7','A8','M1','M2','M3','M5','M6','M7','R1','R2','R3','R4','R5','R6','R7','Y1','Y2','Y3','Y4','Y5','Y6','Y7'], label: 'VIP套票' },
+    { price: 7980, bg: '#FAEEDA', text: '#854F0B', zones: ['A9','A10','A11','A12','A13','M4','M8','M9','M10','M11','M12','M13','R8','R9','R10','R11','R12','R13','R14','Y8','Y9','Y10','Y11','Y12','Y13','Y14'], label: '黃色內場' },
+    { price: 6980, bg: '#EAF3DE', text: '#3B6D11', zones: ['B01','B02','B03','C01','C02','D01','D02','E01','E02','E03','E04','F01','F02','F03','H01','H02','H03','I01','I02','I03','I04'], label: '看台正面' },
+    { price: 5980, bg: '#E6F1FB', text: '#0C447C', zones: ['C03','C04','C05','C06','C07','C08','G01','G02','G03','G04','G05','G06','E05','E06','E07','E08'], label: '看台側面前' },
+    { price: 4980, bg: '#FAECE7', text: '#712B13', zones: ['C13','C14','C15','C16','G14','G15','G16','G17','E09','E10','E11','E12','D03','D04'], label: '看台側面後' },
+    { price: 3980, bg: '#FBEAF0', text: '#72243E', zones: ['F04','F05','H05','H06','H07','E17','E18','E19','E20'], label: '二樓邊角' },
+    { price: 2980, bg: '#EEEDFE', text: '#3C3489', zones: ['B06','B07','B08','D07','D08','E26','E27','E28','V12'], label: '二樓最遠' }
+  ];
+
+  function genCaptcha(){
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    let s = '';
+    for(let i=0;i<4;i++) s += chars[Math.floor(Math.random()*chars.length)];
+    return s;
+  }
+
+  function formatTime(ms){
+    if(ms < 0) ms = 0;
+    const totalSec = Math.floor(ms/1000);
+    const m = Math.floor(totalSec/60); const s = totalSec % 60;
+    const cs = Math.floor((ms % 1000)/10);
+    return m+':' + String(s).padStart(2,'0') + '.' + String(cs).padStart(2,'0');
+  }
+
+  function updateClock(){
+    if(!state.startTime) return;
+    const elapsed = Date.now() - state.startTime;
+    const sec = Math.floor(elapsed/1000);
+    const m = Math.floor(sec/60); const s = sec % 60;
+    topclock.textContent = `12:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+    const bestStr = state.bestTime ? ` ・ 最佳：${state.bestTime.toFixed(1)}s` : '';
+    statsEl.textContent = `本次累計：${formatTime(elapsed)}${bestStr}`;
+  }
+
+  function startClock(){
+    if(state.clockTimer) clearInterval(state.clockTimer);
+    state.clockTimer = setInterval(updateClock, 200);
+  }
+
+  function memberBar(){
+    const modeMap = { army: 'ARMY 預售模式', lntw: 'Live Nation 預售', public: '全面開賣' };
+    return `
+      <div class="member-bar">
+        <span><span style="color: #34c759;">●</span> 已登入：army_taiwan</span>
+        <span class="text-secondary">${modeMap[state.mode]}</span>
+      </div>
+    `;
+  }
+
+  function render(){
+    const pages = {
+      start: renderStart, mode: renderMode, prep: renderPrep,
+      activity: renderActivity, presale_code: renderPresaleCode,
+      queue: renderQueue, event: renderEvent, zone: renderZone,
+      qty: renderQty, captcha: renderCaptcha,
+      confirm: renderConfirm, identity: renderIdentity,
+      payment_method: renderPaymentMethod, payment: renderPayment,
+      success: renderSuccess, failed: renderFailed
+    };
+    if(pages[state.page]) pages[state.page]();
+  }
+
+  function renderStart(){
+    if(state.clockTimer) clearInterval(state.clockTimer);
+    topclock.textContent = '11:59:55';
+    const bestHtml = state.bestTime ?
+      `<div class="alert alert-info"><span class="icon">🏆</span>最佳紀錄：<b>${state.bestTime.toFixed(1)} 秒</b></div>` : '';
+    statsEl.textContent = state.bestTime ? `最佳紀錄：${state.bestTime.toFixed(1)}s` : '';
+    app.innerHTML = `
+      <div class="text-center">
+        <div style="font-size: 13px;" class="text-secondary">拓元售票系統練習版</div>
+        <div style="font-size: 22px; font-weight: 600; margin: 6px 0;">BTS 高雄演唱會搶票</div>
+        <div style="font-size: 13px;" class="text-secondary">完整模擬 6/2、6/3、6/4 三種情境</div>
+        ${bestHtml}
+        <div class="card" style="text-align: left; margin-top: 14px;">
+          <div style="font-size: 14px; font-weight: 600; margin-bottom: 8px;">⏱️ 完整流程（共 10 步）</div>
+          <div style="font-size: 12px; line-height: 1.9;" class="text-secondary">
+            1. 開賣前倒數準備<br>
+            2. 12:00 點立即購票<br>
+            3. <b style="color: #ff3b30;">輸入 ARMY 預購碼</b>（限 6/2）<br>
+            4. 排隊系統等候<br>
+            5. 選場次<br>
+            6. 選票區<br>
+            7. 選張數<br>
+            8. 輸入驗證碼<br>
+            9. 填寫實名制資料<br>
+            10. 選付款方式 + 輸入信用卡
+          </div>
+        </div>
+        <button class="btn-primary" onclick="goMode()">選擇搶票模式 →</button>
+      </div>
+    `;
+  }
+
+  function renderMode(){
+    app.innerHTML = `
+      <div>
+        <div style="font-size: 16px; font-weight: 600; margin-bottom: 12px;">選擇要練習的場次</div>
+        <button class="session-btn" onclick="setMode('army')">
+          <div>
+            <div style="font-size: 15px; font-weight: 600;">6/2 ARMY 會員預售</div>
+            <div style="font-size: 12px; margin-top: 3px;" class="text-secondary">需 Weverse 登記 + 輸入 BA 預購碼・限 2 張</div>
+          </div>
+          <div style="font-size: 13px;" class="text-info">挑戰 →</div>
+        </button>
+        <button class="session-btn" onclick="setMode('lntw')">
+          <div>
+            <div style="font-size: 15px; font-weight: 600;">6/3 Live Nation 預售</div>
+            <div style="font-size: 12px; margin-top: 3px;" class="text-secondary">LN 會員專屬・限 2 張</div>
+          </div>
+          <div style="font-size: 13px;" class="text-info">挑戰 →</div>
+        </button>
+        <button class="session-btn" onclick="setMode('public')">
+          <div>
+            <div style="font-size: 15px; font-weight: 600;">6/4 全面開賣</div>
+            <div style="font-size: 12px; margin-top: 3px;" class="text-secondary">任何人都可買・限 4 張・最激烈</div>
+          </div>
+          <div style="font-size: 13px;" class="text-info">挑戰 →</div>
+        </button>
+        <button class="btn-secondary" onclick="goBack('start')" style="margin-top: 10px; padding: 8px; font-size: 12px;">← 返回</button>
+      </div>
+    `;
+  }
+
+  function renderPrep(){
+    const modeTxt = state.mode === 'army' ? '6/2 ARMY 預售' : state.mode === 'lntw' ? '6/3 LN 預售' : '6/4 全面開賣';
+    app.innerHTML = `
+      <div>
+        <div style="font-size: 16px; font-weight: 600; margin-bottom: 12px; text-align: center;">⏰ 開賣前 15 分鐘準備清單</div>
+        <div class="alert alert-info">模擬情境：現在是 11:45，距離 ${modeTxt} 還有 15 分鐘</div>
+        <div class="card">
+          <div style="font-size: 14px; font-weight: 600; margin-bottom: 8px;">✅ 環境檢查</div>
+          <div style="font-size: 13px; line-height: 1.9;" class="text-secondary">
+            ▢ 使用電腦（不用手機）<br>
+            ▢ Chrome / Safari / Firefox 瀏覽器<br>
+            ▢ 光纖網路（&gt; 20MB）<br>
+            ▢ 已登入拓元會員<br>
+            ▢ 信用卡資料已存瀏覽器<br>
+            ▢ 對好中原標準時間
+          </div>
+        </div>
+        ${state.mode === 'army' ? `
+        <div class="card">
+          <div style="font-size: 14px; font-weight: 600; margin-bottom: 8px;">🔑 ARMY 預售專屬</div>
+          <div style="font-size: 13px; line-height: 1.9;" class="text-secondary">
+            ▢ Weverse 已於 5/22-5/27 完成登記<br>
+            ▢ ARMY Membership 仍在效期內<br>
+            ▢ 已截圖 BA 開頭 9 碼編號<br>
+            ▢ Weverse 與拓元資料一致
+          </div>
+        </div>` : ''}
+        <button class="btn-primary" onclick="goActivity()">準備好了，進入活動頁 →</button>
+      </div>
+    `;
+  }
+
+  function renderActivity(){
+    state.countdownReady = false;
+    app.innerHTML = `
+      <div>
+        ${memberBar()}
+        <div style="text-align: center; padding: 4px 0 12px;">
+          <div style="background: linear-gradient(135deg, #7F77DD 0%, #534AB7 100%); color: white; border-radius: 10px; padding: 20px 16px; margin-bottom: 14px;">
+            <div style="font-size: 11px; opacity: 0.85; margin-bottom: 4px;">BTS WORLD TOUR 'ARIRANG'</div>
+            <div style="font-size: 18px; font-weight: 600;">高雄場演唱會</div>
+            <div style="font-size: 12px; opacity: 0.9; margin-top: 6px;">2026/11/19・21・22 高雄世運主場館</div>
+          </div>
+        </div>
+        <div class="countdown-box">
+          <div class="countdown-label">距離開賣（請對中原標準時間）</div>
+          <div id="countdown" class="countdown-number">0:05.00</div>
+        </div>
+        <div class="alert alert-warning">
+          <span class="icon">⚠️</span> 倒數歸零後<b>請手動刷新一次</b>，「立即購票」才會亮
+        </div>
+        <button id="grabBtn" class="btn-primary" disabled style="opacity: 0.4;">⏳ 等待開賣...</button>
+        <div style="font-size: 11px; margin-top: 8px; text-align: center;" class="text-tertiary">提示：歸零瞬間立刻點擊，反應快才能搶得到</div>
+      </div>
+    `;
+
+    let remain = 5000;
+    const start = Date.now();
+    const cd = document.getElementById('countdown');
+    const btn = document.getElementById('grabBtn');
+    if(state.timer) clearInterval(state.timer);
+    state.timer = setInterval(()=>{
+      remain = 5000 - (Date.now() - start);
+      if(remain <= 0){
+        clearInterval(state.timer);
+        cd.textContent = '0:00.00';
+        cd.style.color = '#34c759';
+        btn.disabled = false;
+        btn.className = 'btn-grab';
+        btn.textContent = '🔥 立即購票 →';
+        btn.style.opacity = '1';
+        state.countdownReady = true;
+        state.startTime = Date.now();
+        state.pageStartTime = Date.now();
+        startClock();
+      } else {
+        cd.textContent = formatTime(remain);
+      }
+    }, 50);
+  }
+
+  function renderPresaleCode(){
+    app.innerHTML = `
+      <div>
+        ${memberBar()}
+        <div class="alert alert-danger">
+          <span class="icon">🔑</span> ARMY MEMBERSHIP 優先購票驗證
+        </div>
+        <div class="card">
+          <div style="font-size: 14px; font-weight: 600; margin-bottom: 8px;">請輸入會員編號</div>
+          <div style="font-size: 12px; margin-bottom: 12px;" class="text-secondary">
+            從 Weverse App → My → Membership 取得<br>
+            格式：BA + 9 位數字（例：BA123456789）
+          </div>
+          <label>會員編號 <span class="required">*</span></label>
+          <input id="bacode" type="text" placeholder="BA123456789" maxlength="11" style="text-transform: uppercase; font-family: ui-monospace, monospace; letter-spacing: 2px; font-size: 15px;" autocomplete="off">
+        </div>
+        <div id="codeErr" style="display:none;" class="alert alert-danger"></div>
+        <button class="btn-primary" onclick="submitCode()">驗證並繼續 →</button>
+        <div style="font-size: 11px; margin-top: 8px; text-align: center;" class="text-tertiary">提示：練習用，輸入 BA + 任意 9 碼數字即可</div>
+      </div>
+    `;
+    setTimeout(()=>{ const c = document.getElementById('bacode'); if(c){ c.focus(); c.value='BA'; }}, 100);
+  }
+
+  function renderQueue(){
+    state.queueNumber = Math.floor(Math.random() * 80000) + 15000;
+    const myNum = Math.floor(Math.random() * 5000) + 1000;
+    app.innerHTML = `
+      <div class="text-center">
+        ${memberBar()}
+        <div style="font-size: 48px;">👥</div>
+        <div style="font-size: 15px; margin: 8px 0 4px;" class="text-secondary">您已進入排隊系統</div>
+        <div style="font-size: 12px; margin-bottom: 16px;" class="text-tertiary">⚠ 請勿重新整理，否則排到隊伍最後</div>
+        <div class="card">
+          <div style="font-size: 12px;" class="text-secondary">您的進站號碼</div>
+          <div style="font-size: 24px; font-weight: 600; font-family: ui-monospace, monospace; color: #007aff; margin: 4px 0;">${myNum.toLocaleString()}</div>
+          <div style="font-size: 12px; margin-top: 8px;" class="text-secondary">前面尚有</div>
+          <div id="queueNum" style="font-size: 28px; font-weight: 600; font-family: ui-monospace, monospace;">${state.queueNumber.toLocaleString()}</div>
+          <div style="font-size: 12px;" class="text-secondary">人在等候</div>
+        </div>
+        <div class="progress-bar"><div id="queueBar" class="progress-fill"></div></div>
+        <div id="queueStatus" style="font-size: 13px;" class="text-secondary">預估等候時間：2 分鐘</div>
+      </div>
+    `;
+    let progress = 0;
+    if(state.timer) clearInterval(state.timer);
+    state.timer = setInterval(()=>{
+      progress += 5;
+      const remaining = Math.floor(state.queueNumber * (1 - progress/100));
+      const numEl = document.getElementById('queueNum');
+      const barEl = document.getElementById('queueBar');
+      const statusEl = document.getElementById('queueStatus');
+      if(numEl) numEl.textContent = remaining.toLocaleString();
+      if(barEl) barEl.style.width = progress + '%';
+      if(progress >= 30 && statusEl) statusEl.textContent = '預估等候時間：1 分鐘';
+      if(progress >= 70 && statusEl) statusEl.textContent = '即將進入購票頁面';
+      if(progress >= 100){
+        clearInterval(state.timer);
+        recordStage('排隊等待');
+        state.page = 'event';
+        render();
+      }
+    }, 80);
+  }
+
+  function renderEvent(){
+    const sessions = [
+      { date: '2026/11/19', day: '四', label: '平日場', sold: Math.random() < 0.1 },
+      { date: '2026/11/21', day: '六', label: '週末場', sold: Math.random() < 0.3 },
+      { date: '2026/11/22', day: '日', label: '週末場', sold: Math.random() < 0.4 }
+    ];
+    state.sessions = sessions;
+    app.innerHTML = `
+      <div>
+        ${memberBar()}
+        <div class="alert alert-info"><span class="icon">⏰</span> 請於 15 分鐘內完成購票</div>
+        <div style="font-size: 14px; font-weight: 600; margin-bottom: 12px;">選擇場次</div>
+        ${sessions.map((s,i)=>`
+          <button class="session-btn" onclick="pickSession(${i})" ${s.sold?'disabled':''}>
+            <div>
+              <div style="font-size: 15px; font-weight: 600;">${s.date} (${s.day})</div>
+              <div style="font-size: 12px; margin-top: 3px;" class="text-secondary">19:30 ${s.label}</div>
+            </div>
+            <div style="font-size: 13px; font-weight: 500;" class="${s.sold?'text-danger':'text-info'}">${s.sold ? '已售完' : '購買 →'}</div>
+          </button>
+        `).join('')}
+      </div>
+    `;
+  }
+
+  function renderZone(){
+    if(!state.soldOutPrices){
+      state.soldOutPrices = [];
+      zones.forEach(z=>{
+        const rate = z.price >= 7980 ? 0.55 : z.price === 6980 ? 0.45 : z.price === 5980 ? 0.35 : z.price === 4980 ? 0.25 : 0.2;
+        if(Math.random() < rate) state.soldOutPrices.push(z.price);
+      });
+    }
+    const s = state.sessions[state.selectedDate];
+    app.innerHTML = `
+      <div>
+        <div class="alert alert-info" style="display: flex; justify-content: space-between;">
+          <span>${s.date} (${s.day})</span>
+          <span id="paytime" style="font-family: ui-monospace, monospace;">剩餘 ${Math.floor(state.paymentTimer/60)}:${String(state.paymentTimer%60).padStart(2,'0')}</span>
+        </div>
+        <div style="font-size: 14px; font-weight: 600; margin-bottom: 12px;">選擇票區</div>
+        ${zones.map((z,i)=>{
+          const sold = state.soldOutPrices.includes(z.price);
+          return `
+            <button class="zone-btn" onclick="pickZone(${i})" ${sold?'disabled':''} style="background: ${sold?'#f5f5f7':z.bg};">
+              <div>
+                <div style="font-size: 15px; font-weight: 600; color: ${sold?'#6b6b70':z.text};">NT$ ${z.price.toLocaleString()}</div>
+                <div style="font-size: 12px; opacity: 0.85; margin-top: 2px; color: ${sold?'#6b6b70':z.text};">${z.label}</div>
+              </div>
+              <div style="font-size: 12px; font-weight: 500; color: ${sold?'#ff3b30':z.text};">${sold ? '售完' : '尚有'}</div>
+            </button>
+          `;
+        }).join('')}
+        <button class="btn-secondary" onclick="goBack('event')" style="margin-top: 10px; padding: 8px; font-size: 12px;">← 返回</button>
+      </div>
+    `;
+    startPaymentTimer();
+  }
+
+  function renderQty(){
+    const z = zones[state.selectedZone];
+    const s = state.sessions[state.selectedDate];
+    const availableZones = z.zones.filter(()=> Math.random() > 0.5);
+    if(availableZones.length === 0) availableZones.push(z.zones[Math.floor(Math.random()*z.zones.length)]);
+    const maxQty = state.mode === 'public' ? 4 : 2;
+
+    app.innerHTML = `
+      <div>
+        <div class="alert alert-info" style="display: flex; justify-content: space-between;">
+          <span>${s.date} (${s.day}) ・ NT$ ${z.price.toLocaleString()}</span>
+          <span id="paytime" style="font-family: ui-monospace, monospace;">剩餘 ${Math.floor(state.paymentTimer/60)}:${String(state.paymentTimer%60).padStart(2,'0')}</span>
+        </div>
+        <div class="card">
+          <div style="font-size: 14px; font-weight: 600; margin-bottom: 10px;">選擇區域與張數</div>
+          <label>區域（系統自動配位）<span class="required">*</span></label>
+          <select id="subzone">
+            <option value="">-- 請選擇 --</option>
+            ${availableZones.map(sz=>`<option value="${sz}">${sz} 區</option>`).join('')}
+          </select>
+          <label style="margin-top: 10px;">張數 <span class="required">*</span></label>
+          <select id="qty">
+            <option value="">-- 請選擇 --</option>
+            ${Array.from({length: maxQty}, (_,i)=>`<option value="${i+1}">${i+1} 張</option>`).join('')}
+          </select>
+          <div style="font-size: 11px; margin-top: 6px;" class="text-tertiary">本階段限購 ${maxQty} 張</div>
+        </div>
+        <div id="qtyErr" style="display:none;" class="alert alert-danger"></div>
+        <button class="btn-primary" onclick="submitQty()">下一步：驗證碼 →</button>
+      </div>
+    `;
+    setTimeout(()=>{ const sz = document.getElementById('subzone'); if(sz) sz.focus(); }, 100);
+    startPaymentTimer();
+  }
+
+  function renderCaptcha(){
+    if(!state.captchaCode) state.captchaCode = genCaptcha();
+    app.innerHTML = `
+      <div>
+        <div class="alert alert-danger" style="display: flex; justify-content: space-between;">
+          <span>🔤 驗證碼</span>
+          <span id="paytime" style="font-weight: 600; font-family: ui-monospace, monospace;">剩餘 ${Math.floor(state.paymentTimer/60)}:${String(state.paymentTimer%60).padStart(2,'0')}</span>
+        </div>
+        <div class="card">
+          <div style="font-size: 14px; font-weight: 600; margin-bottom: 10px;">請輸入下方驗證碼</div>
+          <div class="captcha-display">${state.captchaCode}</div>
+          <input id="cap" type="text" placeholder="請輸入上方驗證碼" maxlength="4" style="text-transform: uppercase; font-family: ui-monospace, monospace; text-align: center; letter-spacing: 4px; font-size: 16px;" autocomplete="off">
+          <div style="font-size: 11px; margin-top: 6px;" class="text-tertiary">不分大小寫</div>
+          <div style="display: flex; gap: 6px; margin-top: 8px;">
+            <button class="btn-secondary" onclick="refreshCaptcha()" style="flex: 1; padding: 6px; font-size: 11px;">🔄 換一組</button>
+            <button class="btn-secondary" onclick="playSound()" style="flex: 1; padding: 6px; font-size: 11px;">🔊 朗讀</button>
+          </div>
+        </div>
+        <div id="capErr" style="display:none;" class="alert alert-danger"></div>
+        <button class="btn-primary" onclick="submitCaptcha()">下一步：確認訂單 →</button>
+      </div>
+    `;
+    setTimeout(()=>{ const c = document.getElementById('cap'); if(c) c.focus(); }, 100);
+    startPaymentTimer();
+  }
+
+  function renderConfirm(){
+    const z = zones[state.selectedZone];
+    const s = state.sessions[state.selectedDate];
+    const total = z.price * state.quantity;
+    app.innerHTML = `
+      <div>
+        <div class="alert alert-warning" style="display: flex; justify-content: space-between;">
+          <span>📝 確認訂單內容</span>
+          <span id="paytime" style="font-weight: 600; font-family: ui-monospace, monospace;">剩餘 ${Math.floor(state.paymentTimer/60)}:${String(state.paymentTimer%60).padStart(2,'0')}</span>
+        </div>
+        <div class="card">
+          <div style="font-size: 14px; font-weight: 600; margin-bottom: 10px;">訂單明細</div>
+          <table>
+            <tr><td class="label-td">演出</td><td class="value-td">BTS ARIRANG 高雄場</td></tr>
+            <tr><td class="label-td">場次</td><td class="value-td">${s.date} (${s.day}) 19:30</td></tr>
+            <tr><td class="label-td">票區</td><td class="value-td">${state.selectedSubZone} 區（自動配位）</td></tr>
+            <tr><td class="label-td">票價</td><td class="value-td">NT$ ${z.price.toLocaleString()}</td></tr>
+            <tr><td class="label-td">張數</td><td class="value-td">${state.quantity} 張</td></tr>
+            <tr style="border-top: 1px solid #e5e5ea;">
+              <td style="padding-top: 8px; font-weight: 600;">小計</td>
+              <td class="value-td text-danger" style="padding-top: 8px; font-weight: 600; font-size: 16px;">NT$ ${total.toLocaleString()}</td>
+            </tr>
+          </table>
+        </div>
+        <div class="card">
+          <div style="font-size: 12px; line-height: 1.7;" class="text-secondary">
+            <b>退票須知：</b>付款完成後如需退票，須在演出前 10 日提出，扣除票面金額 10% 手續費。實名制票券不可轉讓他人。
+          </div>
+        </div>
+        <button class="btn-primary" onclick="goIdentity()">確認，下一步 →</button>
+      </div>
+    `;
+    startPaymentTimer();
+  }
+
+  function renderIdentity(){
+    app.innerHTML = `
+      <div>
+        <div class="alert alert-danger" style="display: flex; justify-content: space-between;">
+          <span>🪪 實名制資料</span>
+          <span id="paytime" style="font-weight: 600; font-family: ui-monospace, monospace;">剩餘 ${Math.floor(state.paymentTimer/60)}:${String(state.paymentTimer%60).padStart(2,'0')}</span>
+        </div>
+        <div class="alert alert-warning"><span class="icon">⚠️</span> 入場將核對證件，姓名與身分證號需與 Weverse 登記一致</div>
+        <div class="card">
+          <div style="font-size: 14px; font-weight: 600; margin-bottom: 10px;">持票人資料</div>
+          <div style="margin-bottom: 10px;">
+            <label>姓名 <span class="required">*</span></label>
+            <input id="name" type="text" placeholder="與證件相同" autocomplete="name">
+          </div>
+          <div style="margin-bottom: 10px;">
+            <label>身分證字號 <span class="required">*</span></label>
+            <input id="idno" type="text" placeholder="A123456789" maxlength="10" style="text-transform: uppercase; font-family: ui-monospace, monospace;" autocomplete="off">
+          </div>
+          <div>
+            <label>手機號碼 <span class="required">*</span></label>
+            <input id="phone" type="tel" placeholder="09xxxxxxxx" maxlength="10" style="font-family: ui-monospace, monospace;" autocomplete="tel">
+          </div>
+        </div>
+        <div id="idErr" style="display:none;" class="alert alert-danger"></div>
+        <button class="btn-primary" onclick="submitIdentity()">下一步：選付款方式 →</button>
+      </div>
+    `;
+    setTimeout(()=>{
+      const n = document.getElementById('name');
+      const idnoEl = document.getElementById('idno');
+      const phoneEl = document.getElementById('phone');
+      if(n) n.focus();
+      if(idnoEl){
+        idnoEl.addEventListener('input', function(e){
+          let v = e.target.value.toUpperCase();
+          if(v.length > 0) v = v[0].replace(/[^A-Z]/g,'') + v.slice(1).replace(/\D/g,'');
+          if(v.length > 10) v = v.slice(0, 10);
+          e.target.value = v;
+          if(v.length === 10 && phoneEl) phoneEl.focus();
+        });
+      }
+      if(phoneEl){
+        phoneEl.addEventListener('input', function(e){
+          let v = e.target.value.replace(/\D/g,'');
+          if(v.length > 10) v = v.slice(0, 10);
+          e.target.value = v;
+        });
+      }
+    }, 100);
+    startPaymentTimer();
+  }
+
+  function renderPaymentMethod(){
+    app.innerHTML = `
+      <div>
+        <div class="alert alert-warning" style="display: flex; justify-content: space-between;">
+          <span>💳 選擇付款方式</span>
+          <span id="paytime" style="font-weight: 600; font-family: ui-monospace, monospace;">剩餘 ${Math.floor(state.paymentTimer/60)}:${String(state.paymentTimer%60).padStart(2,'0')}</span>
+        </div>
+        <div class="payment-method">
+          <div class="pay-opt active" data-method="card" onclick="selectPayMethod('card')">
+            <div style="font-size: 20px;">💳</div>
+            <div style="margin-top: 4px;">信用卡</div>
+            <div style="font-size: 10px; margin-top: 2px;">即時</div>
+          </div>
+          <div class="pay-opt" data-method="atm" onclick="selectPayMethod('atm')">
+            <div style="font-size: 20px;">🏦</div>
+            <div style="margin-top: 4px;">ATM</div>
+            <div style="font-size: 10px; margin-top: 2px;">虛擬帳號</div>
+          </div>
+          <div class="pay-opt" data-method="cvs" onclick="selectPayMethod('cvs')">
+            <div style="font-size: 20px;">🏪</div>
+            <div style="margin-top: 4px;">超商</div>
+            <div style="font-size: 10px; margin-top: 2px;">代碼繳費</div>
+          </div>
+        </div>
+        <div class="alert alert-info" style="font-size: 12px;">
+          <span class="icon">💡</span> <b>推薦信用卡</b>：即時付款，最不容易票飛。ATM / 超商需 10-15 分鐘後才會顯示付款完成。
+        </div>
+        <button class="btn-primary" onclick="goPayment()">下一步：輸入付款資料 →</button>
+      </div>
+    `;
+    startPaymentTimer();
+  }
+
+  function renderPayment(){
+    const z = zones[state.selectedZone];
+    const s = state.sessions[state.selectedDate];
+    const total = z.price * state.quantity;
+
+    if(state.paymentMethod === 'atm'){
+      app.innerHTML = `
+        <div>
+          <div class="alert alert-danger" style="display: flex; justify-content: space-between;">
+            <span>🏦 ATM 虛擬帳號付款</span>
+            <span id="paytime" style="font-weight: 600; font-family: ui-monospace, monospace;">剩餘 ${Math.floor(state.paymentTimer/60)}:${String(state.paymentTimer%60).padStart(2,'0')}</span>
+          </div>
+          <div class="card">
+            <table>
+              <tr><td class="label-td">總金額</td><td class="value-td text-danger" style="font-weight: 600;">NT$ ${total.toLocaleString()}</td></tr>
+              <tr><td class="label-td">繳費期限</td><td class="value-td">24 小時內</td></tr>
+            </table>
+          </div>
+          <div class="alert alert-warning">
+            <span class="icon">⚠️</span> ATM 付款需 10-15 分鐘後才會顯示完成，期間票券仍會保留
+          </div>
+          <button class="btn-primary" onclick="confirmPay()">確認預訂 →</button>
+        </div>
+      `;
+      return;
+    }
+
+    if(state.paymentMethod === 'cvs'){
+      app.innerHTML = `
+        <div>
+          <div class="alert alert-danger" style="display: flex; justify-content: space-between;">
+            <span>🏪 超商代碼繳費</span>
+            <span id="paytime" style="font-weight: 600; font-family: ui-monospace, monospace;">剩餘 ${Math.floor(state.paymentTimer/60)}:${String(state.paymentTimer%60).padStart(2,'0')}</span>
+          </div>
+          <div class="card">
+            <table>
+              <tr><td class="label-td">總金額</td><td class="value-td text-danger" style="font-weight: 600;">NT$ ${total.toLocaleString()}</td></tr>
+              <tr><td class="label-td">繳費期限</td><td class="value-td">3 天內</td></tr>
+              <tr><td class="label-td">手續費</td><td class="value-td">NT$ 30</td></tr>
+            </table>
+          </div>
+          <button class="btn-primary" onclick="confirmPay()">確認預訂 →</button>
+        </div>
+      `;
+      return;
+    }
+
+    app.innerHTML = `
+      <div>
+        <div class="alert alert-danger" style="display: flex; justify-content: space-between;">
+          <span>💳 信用卡資訊</span>
+          <span id="paytime" style="font-weight: 600; font-family: ui-monospace, monospace;">剩餘 ${Math.floor(state.paymentTimer/60)}:${String(state.paymentTimer%60).padStart(2,'0')}</span>
+        </div>
+        <div class="card">
+          <div style="font-size: 14px; font-weight: 600;">總金額：<span class="text-danger" style="font-size: 16px;">NT$ ${total.toLocaleString()}</span></div>
+        </div>
+        <div class="card">
+          <div style="margin-bottom: 10px;">
+            <label>卡號 <span class="required">*</span></label>
+            <input id="cardno" type="text" inputmode="numeric" placeholder="1234 5678 9012 3456" maxlength="19" style="font-family: ui-monospace, monospace; letter-spacing: 1px;" autocomplete="cc-number">
+          </div>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+            <div>
+              <label>到期 (MM/YY) <span class="required">*</span></label>
+              <input id="exp" type="text" inputmode="numeric" placeholder="12/28" maxlength="5" style="font-family: ui-monospace, monospace;" autocomplete="cc-exp">
+            </div>
+            <div>
+              <label>CVV <span class="required">*</span></label>
+              <input id="cvv" type="text" inputmode="numeric" placeholder="3 碼" maxlength="3" style="font-family: ui-monospace, monospace;" autocomplete="cc-csc">
+            </div>
+          </div>
+          <div style="margin-top: 10px;">
+            <label>持卡人姓名 <span class="required">*</span></label>
+            <input id="cardname" type="text" placeholder="與卡片相同（英文）" autocomplete="cc-name">
+          </div>
+        </div>
+        <div id="payErr" style="display:none;" class="alert alert-danger"></div>
+        <button class="btn-danger" onclick="confirmPay()">確認付款 NT$ ${total.toLocaleString()}</button>
+        <div style="font-size: 11px; margin-top: 8px; text-align: center;" class="text-tertiary">測試卡號：4111 1111 1111 1111</div>
+      </div>
+    `;
+    setTimeout(()=>{
+      const c = document.getElementById('cardno');
+      if(c) c.focus();
+      const cardnoEl = document.getElementById('cardno');
+      const expEl = document.getElementById('exp');
+      const cvvEl = document.getElementById('cvv');
+      if(cardnoEl){
+        cardnoEl.addEventListener('input', function(e){
+          let v = e.target.value.replace(/\s/g,'').replace(/\D/g,'');
+          if(v.length > 16) v = v.slice(0, 16);
+          e.target.value = v.match(/.{1,4}/g)?.join(' ') || '';
+          if(v.length === 16 && expEl) expEl.focus();
+        });
+      }
+      if(expEl){
+        expEl.addEventListener('input', function(e){
+          let v = e.target.value.replace(/\D/g,'');
+          if(v.length > 4) v = v.slice(0, 4);
+          if(v.length >= 3) e.target.value = v.slice(0,2) + '/' + v.slice(2);
+          else e.target.value = v;
+          if(v.length === 4 && cvvEl) cvvEl.focus();
+        });
+        expEl.addEventListener('keydown', function(e){
+          if(e.key === 'Backspace' && e.target.value.length === 3 && e.target.value.endsWith('/')){
+            e.target.value = e.target.value.slice(0, -1);
+            e.preventDefault();
+          }
+        });
+      }
+      if(cvvEl){
+        cvvEl.addEventListener('input', function(e){
+          let v = e.target.value.replace(/\D/g,'');
+          if(v.length > 3) v = v.slice(0, 3);
+          e.target.value = v;
+          if(v.length === 3){
+            const cn = document.getElementById('cardname');
+            if(cn) cn.focus();
+          }
+        });
+      }
+    }, 100);
+    startPaymentTimer();
+  }
+
+  function renderSuccess(){
+    if(state.timer) clearInterval(state.timer);
+    if(state.clockTimer) clearInterval(state.clockTimer);
+    const z = zones[state.selectedZone];
+    const s = state.sessions[state.selectedDate];
+    const elapsed = (state.endTime - state.startTime)/1000;
+    const isBest = !state.bestTime || elapsed < state.bestTime;
+    if(isBest){
+      state.bestTime = elapsed;
+      try { localStorage.setItem('bts_best_time', String(elapsed)); } catch(e) {}
+    }
+    const breakdownHtml = Object.keys(state.stageTimes).map(k =>
+      `<tr><td class="label-td">${k}</td><td class="value-td" style="font-family: ui-monospace, monospace;">${state.stageTimes[k].toFixed(1)}s</td></tr>`
+    ).join('');
+
+    app.innerHTML = `
+      <div class="text-center">
+        <div style="font-size: 56px;">🎉</div>
+        <div style="font-size: 22px; font-weight: 600; margin: 8px 0 4px;">搶票成功！</div>
+        <div style="font-size: 13px; margin-bottom: 16px;" class="text-secondary">
+          總耗時 <b class="text-info" style="font-size: 18px;">${elapsed.toFixed(1)}</b> 秒
+          ${isBest ? '<br><span class="text-warning">🏆 新紀錄！</span>' : ''}
+        </div>
+        <div class="card" style="text-align: left;">
+          <div style="font-size: 13px; font-weight: 600; margin-bottom: 8px;">🎫 訂單</div>
+          <table style="font-size: 12px;">
+            <tr><td class="label-td">場次</td><td class="value-td">${s.date} (${s.day})</td></tr>
+            <tr><td class="label-td">票區</td><td class="value-td">${state.selectedSubZone} 區</td></tr>
+            <tr><td class="label-td">票價</td><td class="value-td">NT$ ${z.price.toLocaleString()} × ${state.quantity}</td></tr>
+          </table>
+        </div>
+        <div class="card" style="text-align: left;">
+          <div style="font-size: 13px; font-weight: 600; margin-bottom: 8px;">⏱️ 各階段耗時</div>
+          <table style="font-size: 12px;">${breakdownHtml}</table>
+        </div>
+        <div class="flex gap-2">
+          <button class="btn-secondary flex-1" onclick="restart()">🔄 再玩一次</button>
+          <button class="btn-primary flex-1" onclick="shareResult(${elapsed.toFixed(1)})" style="padding: 12px; font-size: 14px;">分享成績</button>
+        </div>
+      </div>
+    `;
+  }
+
+  function renderFailed(){
+    if(state.timer) clearInterval(state.timer);
+    if(state.clockTimer) clearInterval(state.clockTimer);
+    app.innerHTML = `
+      <div class="text-center">
+        <div style="font-size: 56px;">😢</div>
+        <div style="font-size: 22px; font-weight: 600; margin: 8px 0 4px;">搶票失敗</div>
+        <div style="font-size: 13px; margin-bottom: 16px;" class="text-secondary">${state.failReason || '系統繁忙'}</div>
+        <div class="card" style="text-align: left;">
+          <div style="font-size: 13px; font-weight: 600; margin-bottom: 6px;">💡 下次練習建議</div>
+          <div style="font-size: 12px; line-height: 1.9;" class="text-secondary">${state.failTip || '· 提早登入<br>· 驗證碼專心輸入'}</div>
+        </div>
+        <button class="btn-primary" onclick="restart()" style="padding: 12px; font-size: 14px;">🔄 再挑戰</button>
+      </div>
+    `;
+  }
+
+  function startPaymentTimer(){
+    if(state.timer) clearInterval(state.timer);
+    state.timer = setInterval(()=>{
+      state.paymentTimer--;
+      const el = document.getElementById('paytime');
+      if(el) el.textContent = `剩餘 ${Math.floor(state.paymentTimer/60)}:${String(state.paymentTimer%60).padStart(2,'0')}`;
+      if(state.paymentTimer <= 0){
+        clearInterval(state.timer);
+        state.failReason = '購票時間超過 15 分鐘';
+        state.failTip = '· 進入購票後動作要快<br>· 信用卡資料事先存好<br>· 實名資料背熟';
+        state.endTime = Date.now();
+        state.page = 'failed';
+        render();
+      }
+    }, 1000);
+  }
+
+  function recordStage(name){
+    if(state.pageStartTime){
+      const elapsed = (Date.now() - state.pageStartTime) / 1000;
+      state.stageTimes[name] = elapsed;
+    }
+    state.pageStartTime = Date.now();
+  }
+
+  // Global handlers
+  window.goMode = function(){ state.page = 'mode'; render(); };
+  window.setMode = function(m){ state.mode = m; state.page = 'prep'; render(); };
+  window.goActivity = function(){ state.page = 'activity'; render(); };
+  window.grabTickets = function(){
+    if(!state.countdownReady) return;
+    recordStage('反應時間');
+    state.page = state.mode === 'army' ? 'presale_code' : 'queue';
+    render();
+  };
+  window.submitCode = function(){
+    const v = document.getElementById('bacode').value.toUpperCase().trim();
+    const err = document.getElementById('codeErr');
+    if(!/^BA\d{9}$/.test(v)){
+      err.style.display = 'block';
+      err.textContent = '會員編號格式錯誤（BA + 9 位數字）';
+      return;
+    }
+    recordStage('輸入預購碼');
+    state.page = 'queue';
+    render();
+  };
+  window.pickSession = function(i){
+    state.selectedDate = i;
+    recordStage('選場次');
+    state.page = 'zone';
+    render();
+  };
+  window.pickZone = function(i){
+    state.selectedZone = i;
+    state.selectedSubZone = null;
+    recordStage('選票區');
+    state.page = 'qty';
+    render();
+  };
+  window.submitQty = function(){
+    const sub = document.getElementById('subzone').value;
+    const qty = document.getElementById('qty').value;
+    const err = document.getElementById('qtyErr');
+    if(!sub){ err.style.display = 'block'; err.textContent = '請選擇區域'; return; }
+    if(!qty){ err.style.display = 'block'; err.textContent = '請選擇張數'; return; }
+    state.selectedSubZone = sub;
+    state.quantity = parseInt(qty);
+    state.captchaCode = '';
+    recordStage('選張數');
+    state.page = 'captcha';
+    render();
+  };
+  window.refreshCaptcha = function(){ state.captchaCode = genCaptcha(); render(); };
+  window.playSound = function(){ alert('🔊 驗證碼朗讀：' + state.captchaCode.split('').join(' ')); };
+  window.submitCaptcha = function(){
+    const cap = document.getElementById('cap').value.toUpperCase().trim();
+    const err = document.getElementById('capErr');
+    if(cap !== state.captchaCode){
+      state.failReason = '驗證碼輸入錯誤';
+      state.failTip = '· 看清楚 0 還是 O、1 還是 I<br>· 不分大小寫但要拼對';
+      state.endTime = Date.now();
+      state.page = 'failed';
+      render();
+      return;
+    }
+    recordStage('驗證碼');
+    state.page = 'confirm';
+    render();
+  };
+  window.goIdentity = function(){ recordStage('確認訂單'); state.page = 'identity'; render(); };
+  window.submitIdentity = function(){
+    const name = document.getElementById('name').value.trim();
+    const idno = document.getElementById('idno').value.trim().toUpperCase();
+    const phone = document.getElementById('phone').value.trim();
+    const err = document.getElementById('idErr');
+    if(name.length < 2){ err.style.display = 'block'; err.textContent = '請輸入完整姓名'; return; }
+    if(!/^[A-Z][12]\d{8}$/.test(idno)){
+      err.style.display = 'block';
+      err.textContent = '身分證字號格式錯誤';
+      return;
+    }
+    if(!/^09\d{8}$/.test(phone)){
+      err.style.display = 'block';
+      err.textContent = '手機號碼格式錯誤';
+      return;
+    }
+    recordStage('實名資料');
+    state.page = 'payment_method';
+    render();
+  };
+  window.selectPayMethod = function(m){
+    state.paymentMethod = m;
+    document.querySelectorAll('.pay-opt').forEach(el => {
+      el.classList.toggle('active', el.dataset.method === m);
+    });
+  };
+  window.goPayment = function(){ recordStage('選付款方式'); state.page = 'payment'; render(); };
+  window.confirmPay = function(){
+    if(state.paymentMethod === 'card'){
+      const cardno = document.getElementById('cardno').value.replace(/\s/g,'');
+      const exp = document.getElementById('exp').value.trim();
+      const cvv = document.getElementById('cvv').value.trim();
+      const cardname = document.getElementById('cardname').value.trim();
+      const err = document.getElementById('payErr');
+      if(!/^\d{16}$/.test(cardno)){ err.style.display = 'block'; err.textContent = '卡號需為 16 位數字'; return; }
+      if(!/^\d{2}\/\d{2}$/.test(exp)){ err.style.display = 'block'; err.textContent = '到期日格式錯誤'; return; }
+      if(!/^\d{3}$/.test(cvv)){ err.style.display = 'block'; err.textContent = 'CVV 需為 3 位數字'; return; }
+      if(cardname.length < 2){ err.style.display = 'block'; err.textContent = '請輸入持卡人姓名'; return; }
+    }
+    recordStage('付款');
+    state.endTime = Date.now();
+    if(Math.random() < 0.05){
+      state.failReason = '此票券已被其他人搶先';
+      state.failTip = '· 熱門票區常在最後一秒被搶走<br>· 下次選擇較冷門價位';
+      state.page = 'failed';
+    } else {
+      state.page = 'success';
+    }
+    render();
+  };
+  window.goBack = function(page){ state.page = page; render(); };
+  window.restart = function(){
+    if(state.timer) clearInterval(state.timer);
+    if(state.clockTimer) clearInterval(state.clockTimer);
+    const bestTime = state.bestTime;
+    state = {
+      page: 'start', mode: state.mode, startTime: null, endTime: null,
+      pageStartTime: null, stageTimes: {}, selectedDate: null, selectedZone: null,
+      selectedSubZone: null, quantity: 1, captchaCode: '', queueNumber: 0,
+      soldOutPrices: null, timer: null, clockTimer: null, paymentTimer: 900,
+      bestTime: bestTime, countdownReady: false, paymentMethod: 'card'
+    };
+    render();
+  };
+  window.shareResult = function(seconds){
+    const text = `我在「BTS 高雄場搶票模擬器」用 ${seconds} 秒完成搶票！💜\n你也來挑戰看看 → `;
+    if(navigator.share){
+      navigator.share({ title: 'BTS 搶票模擬器', text: text, url: location.href }).catch(()=>{});
+    } else if(navigator.clipboard){
+      navigator.clipboard.writeText(text + location.href);
+      alert('成績已複製！可貼給朋友挑戰 💜');
+    } else {
+      prompt('複製這段文字：', text + location.href);
+    }
+  };
+
+  document.addEventListener('click', function(e){
+    if(e.target && e.target.id === 'grabBtn') window.grabTickets();
+  });
+
+  render();
+})();
+</script>
+</body>
+</html>
